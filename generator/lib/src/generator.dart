@@ -162,7 +162,7 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
       });
 
   Iterable<Method> _parseMethods(ClassElement element) =>
-      (element.methods..addAll(element.mixins.expand((i) => i.methods)))
+      (<MethodElement>[]..addAll(element.methods)..addAll(element.mixins.expand((i) => i.methods)))
           .where((MethodElement m) {
         final methodAnnot = _getMethodAnnotation(m);
         return methodAnnot != null &&
@@ -206,9 +206,16 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
   }
 
   ConstantReader? _getHeadersAnnotation(MethodElement method) {
-    final annot = _typeChecker(retrofit.Headers)
+    final annotation = _typeChecker(retrofit.Headers)
         .firstAnnotationOf(method, throwOnUnresolved: false);
-    if (annot != null) return ConstantReader(annot);
+    if (annotation != null) return ConstantReader(annotation);
+    return null;
+  }
+
+  ConstantReader? _getCacheAnnotation(MethodElement method) {
+    final annotation = _typeChecker(retrofit.CacheControl)
+        .firstAnnotationOf(method, throwOnUnresolved: false);
+    if (annotation != null) return ConstantReader(annotation);
     return null;
   }
 
@@ -737,9 +744,9 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
               mappedVal += "${_getInnerJsonSerializableMapperFn(arg)}";
             }else{
               if (isGenericArgumentFactories(arg))
-              mappedVal += "(json)=>${_displayString(arg)}.fromJson(json,${_getInnerJsonSerializableMapperFn(arg)}),";
+                mappedVal += "(json)=>${_displayString(arg)}.fromJson(json as Map<String, dynamic>,${_getInnerJsonSerializableMapperFn(arg)}),";
               else
-                mappedVal += "(json)=>${_displayString(arg)}.fromJson(json),";
+                mappedVal += "(json)=>${_displayString(arg)}.fromJson(json as Map<String, dynamic>),";
             }
           else{
             mappedVal += "${_getInnerJsonSerializableMapperFn(arg)}";
@@ -770,6 +777,7 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
       final baseUrl = args.remove(_baseUrlVar)!;
       final cancelToken = args.remove(_cancelToken);
       final sendProgress = args.remove(_onSendProgress);
+      final receiveProgress = args.remove(_onReceiveProgress);
 
       final type = refer(_displayString(_getResponseType(m.returnType)));
 
@@ -779,6 +787,9 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
       }
       if (sendProgress != null){
         composeArguments[_onSendProgress] = sendProgress;
+      }
+      if (receiveProgress != null) {
+        composeArguments[_onReceiveProgress] = receiveProgress;
       }
 
       return refer('_setStreamType').call([
@@ -810,10 +821,20 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
       blocks.add(newOptions
           .property('headers')
           .property('addAll')
-          .call([extraOptions.remove('headers')!]).statement);
+          .call([refer(_dioVar).property('options').property('headers')])
+        .statement);
+      blocks.add(newOptions
+          .property('headers')
+          .property('addAll')
+          .call([extraOptions.remove('headers')!])
+          .statement);
       return newOptions.property('copyWith').call([], Map.from(extraOptions)
         ..[_queryParamsVar] = namedArguments[_queryParamsVar]!
-        ..[_path] = namedArguments[_path]!).cascade('data').assign(namedArguments[_dataVar]!);
+        ..[_path] = namedArguments[_path]!
+        ..[_baseUrlVar] = extraOptions.remove(_baseUrlVar)!.ifNullThen(
+            refer(_dioVar).property('options').property('baseUrl'))
+        ).cascade('data').assign(namedArguments[_dataVar]!
+      );
     }
   }
 
@@ -1083,6 +1104,14 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
             .statement);
         return;
       }
+      else if (m.parameters.length == 2 && m.parameters[1].type.isDartCoreMap) {
+        blocks.add(refer('FormData')
+            .newInstanceNamed('fromMap',
+                [CodeExpression(Code(m.parameters[1].displayName))])
+            .assignFinal(_dataVar)
+            .statement);
+        return;
+      }
       blocks.add(
           refer('FormData').newInstance([]).assignFinal(_dataVar).statement);
 
@@ -1270,7 +1299,8 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
     final anno = _getHeadersAnnotation(m);
     final headersMap = anno?.peek("value")?.mapValue ?? {};
     final headers = headersMap.map((k, v) {
-      return MapEntry(k?.toStringValue() ?? 'null', literal(v?.toStringValue()));
+      return MapEntry(
+          k?.toStringValue() ?? 'null', literal(v?.toStringValue()));
     });
 
     final annosInParam = _getAnnotations(m, retrofit.Header);
@@ -1279,7 +1309,50 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
       return MapEntry(value, refer(k.displayName));
     });
     headers.addAll(headersInParams);
+
+    final cacheMap = _generateCache(m);
+    headers.addAll(cacheMap);
+
     return headers;
+  }
+
+  Map<String, Expression> _generateCache(MethodElement m) {
+    final cache = _getCacheAnnotation(m);
+    final result = <String, Expression>{};
+    if (cache != null && cache.toString() != '') {
+      final maxAge = cache.peek('maxAge')?.intValue;
+      final maxStale = cache.peek('maxStale')?.intValue;
+      final minFresh = cache.peek('minFresh')?.intValue;
+      final noCache = cache.peek('noCache')?.boolValue;
+      final noStore = cache.peek('noStore')?.boolValue;
+      final noTransform = cache.peek('noTransform')?.boolValue;
+      final onlyIfCached = cache.peek('onlyIfCached')?.boolValue;
+      final other = (cache.peek('other')?.listValue ?? const [])
+          .map((e) => e.toStringValue());
+      final otherResult = <String>[];
+
+      other.forEach((element) {
+        if (element != null) {
+          otherResult.add(element);
+        }
+      });
+
+      final values = <String>[
+        maxAge != null ? 'max-age=$maxAge' : '',
+        maxStale != null ? 'max-stale=$maxStale' : '',
+        minFresh != null ? 'max-fresh=$minFresh' : '',
+        (noCache == true) ? 'no-cache' : '',
+        (noStore == true) ? 'no-store' : '',
+        (noTransform == true) ? 'no-transform' : '',
+        (onlyIfCached == true) ? 'only-if-cached' : '',
+        ...otherResult
+      ];
+
+      final value = values.where((element) => element != '').join(', ');
+
+      result.putIfAbsent(HttpHeaders.cacheControlHeader, () => literal(value));
+    }
+    return result;
   }
 
   void _generateExtra(

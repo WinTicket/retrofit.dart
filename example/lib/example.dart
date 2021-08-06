@@ -96,11 +96,11 @@ abstract class RestClient {
       @Part(contentType: 'application/json') File file);
 
   @POST("/post")
-  Future<String> postFormData3(
-      {@Part(value: "customfiles", contentType: 'application/json')
-      required List<File> files,
-      @Part(fileName: "abc.txt")
-      required File file});
+  Future<String> postFormData3({
+    @Part(value: "customfiles", contentType: 'application/json')
+        required List<File> files,
+    @Part(fileName: "abc.txt") required File file,
+  });
 
   @POST("/post")
   Future<String> postFormData6(
@@ -144,13 +144,27 @@ abstract class RestClient {
   @GET('/cancel')
   Future<String> cancelRequest(@CancelRequest() CancelToken cancelToken);
 
-  @PUT('/progress')
-  Future<String> sendProgress(@CancelRequest() CancelToken cancelToken, {@SendProgress() ProgressCallback? sendProgress});
+  @PUT('/sendProgress')
+  Future<String> sendProgress(@CancelRequest() CancelToken cancelToken,
+      {@SendProgress() ProgressCallback? sendProgress});
+
+  @PUT('/receiveProgress')
+  Future<String> receiveProgress(
+    @CancelRequest() CancelToken cancelToken, {
+    @ReceiveProgress() ProgressCallback? receiveProgress,
+  });
 
   @PUT('/boBody')
   @NoBody()
   Future<String> sendWithoutBody();
 
+  @GET('/nestGeneric')
+  Future<ValueWrapper<ValueWrapper<String>>> nestGeneric();
+
+  @GET('cache')
+  @CacheControl(maxAge: 180,maxStale: 300,minFresh: 60,noCache: true,noStore: true,noTransform: true,onlyIfCached: true,other: ['public','proxy-revalidate'])
+  @Headers({'test':'tes t'})
+  Future<String> cache();
 }
 
 @JsonSerializable()
@@ -209,4 +223,18 @@ class TaskGroup {
       _$TaskGroupFromJson(json);
 
   Map<String, dynamic> toJson() => _$TaskGroupToJson(this);
+}
+
+@JsonSerializable(genericArgumentFactories: true)
+class ValueWrapper<T> {
+  const ValueWrapper({required this.value});
+
+  final T value;
+
+  factory ValueWrapper.fromJson(
+          Map<String, dynamic> json, T Function(Object? json) fromJsonT) =>
+      _$ValueWrapperFromJson(json, fromJsonT);
+
+  Map<String, dynamic> toJson(Object? Function(T value) toJsonT) =>
+      _$ValueWrapperToJson(this, toJsonT);
 }

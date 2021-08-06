@@ -88,6 +88,23 @@ Map<String, dynamic> _$TaskGroupToJson(TaskGroup instance) => <String, dynamic>{
       'inProgress': instance.inProgress,
     };
 
+ValueWrapper<T> _$ValueWrapperFromJson<T>(
+  Map<String, dynamic> json,
+  T Function(Object? json) fromJsonT,
+) {
+  return ValueWrapper<T>(
+    value: fromJsonT(json['value']),
+  );
+}
+
+Map<String, dynamic> _$ValueWrapperToJson<T>(
+  ValueWrapper<T> instance,
+  Object? Function(T value) toJsonT,
+) =>
+    <String, dynamic>{
+      'value': toJsonT(instance.value),
+    };
+
 // **************************************************************************
 // RetrofitGenerator
 // **************************************************************************
@@ -521,6 +538,7 @@ class _RestClient implements RestClient {
         'customfiles',
         MultipartFile.fromBytes(
           i,
+          filename: null,
         ))));
     _data.files.add(MapEntry(
         'file',
@@ -652,10 +670,11 @@ class _RestClient implements RestClient {
     final _data = <String, dynamic>{};
     final newOptions = newRequestOptions(options);
     newOptions.extra.addAll(_extra);
+    newOptions.headers.addAll(_dio.options.headers);
     newOptions.headers.addAll(<String, dynamic>{});
     final _result = await _dio.fetch<String>(newOptions.copyWith(
         method: 'GET',
-        baseUrl: baseUrl,
+        baseUrl: baseUrl ?? _dio.options.baseUrl,
         queryParameters: queryParameters,
         path: '')
       ..data = _data);
@@ -687,11 +706,29 @@ class _RestClient implements RestClient {
     final _data = <String, dynamic>{};
     final _result = await _dio.fetch<String>(_setStreamType<String>(
         Options(method: 'PUT', headers: <String, dynamic>{}, extra: _extra)
-            .compose(_dio.options, '/progress',
+            .compose(_dio.options, '/sendProgress',
                 queryParameters: queryParameters,
                 data: _data,
                 cancelToken: cancelToken,
                 onSendProgress: sendProgress)
+            .copyWith(baseUrl: baseUrl ?? _dio.options.baseUrl)));
+    final value = _result.data!;
+    return value;
+  }
+
+  @override
+  Future<String> receiveProgress(cancelToken, {receiveProgress}) async {
+    const _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _data = <String, dynamic>{};
+    final _result = await _dio.fetch<String>(_setStreamType<String>(
+        Options(method: 'PUT', headers: <String, dynamic>{}, extra: _extra)
+            .compose(_dio.options, '/receiveProgress',
+                queryParameters: queryParameters,
+                data: _data,
+                cancelToken: cancelToken,
+                onReceiveProgress: receiveProgress)
             .copyWith(baseUrl: baseUrl ?? _dio.options.baseUrl)));
     final value = _result.data!;
     return value;
@@ -707,6 +744,47 @@ class _RestClient implements RestClient {
             .compose(_dio.options, '/boBody',
                 queryParameters: queryParameters, data: _data)
             .copyWith(baseUrl: baseUrl ?? _dio.options.baseUrl)));
+    final value = _result.data!;
+    return value;
+  }
+
+  @override
+  Future<ValueWrapper<ValueWrapper<String>>> nestGeneric() async {
+    const _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    final _result = await _dio.fetch<Map<String, dynamic>>(
+        _setStreamType<ValueWrapper<ValueWrapper<String>>>(
+            Options(method: 'GET', headers: <String, dynamic>{}, extra: _extra)
+                .compose(_dio.options, '/nestGeneric',
+                    queryParameters: queryParameters, data: _data)
+                .copyWith(baseUrl: baseUrl ?? _dio.options.baseUrl)));
+    final value = ValueWrapper<ValueWrapper<String>>.fromJson(
+      _result.data!,
+      (json) => ValueWrapper<String>.fromJson(
+        json as Map<String, dynamic>,
+        (json) => json as String,
+      ),
+    );
+    return value;
+  }
+
+  @override
+  Future<String> cache() async {
+    const _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    final _result = await _dio.fetch<String>(_setStreamType<String>(Options(
+            method: 'GET',
+            headers: <String, dynamic>{
+              r'test': 'tes t',
+              r'cache-control':
+                  'max-age=180, max-stale=300, max-fresh=60, no-cache, no-store, no-transform, only-if-cached, public, proxy-revalidate'
+            },
+            extra: _extra)
+        .compose(_dio.options, 'cache',
+            queryParameters: queryParameters, data: _data)
+        .copyWith(baseUrl: baseUrl ?? _dio.options.baseUrl)));
     final value = _result.data!;
     return value;
   }
