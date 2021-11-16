@@ -162,9 +162,45 @@ abstract class RestClient {
   Future<ValueWrapper<ValueWrapper<String>>> nestGeneric();
 
   @GET('cache')
-  @CacheControl(maxAge: 180,maxStale: 300,minFresh: 60,noCache: true,noStore: true,noTransform: true,onlyIfCached: true,other: ['public','proxy-revalidate'])
-  @Headers({'test':'tes t'})
+  @CacheControl(
+      maxAge: 180,
+      maxStale: 300,
+      minFresh: 60,
+      noCache: true,
+      noStore: true,
+      noTransform: true,
+      onlyIfCached: true,
+      other: ['public', 'proxy-revalidate'])
+  @Headers({'test': 'tes t'})
   Future<String> cache();
+
+  @POST('post')
+  Future<String> genericBase(@Body() ValueWrapper<String> request);
+
+  @POST('post')
+  Future<String> genericOther(@Body() ValueWrapper<TaskQuery> request);
+
+  @POST('post')
+  Future<String> genericMap(@Body() ValueWrapper<Map<String, dynamic>> request);
+
+  @POST('post')
+  Future<String> genericListBase(@Body() ValueWrapper<List<String>> request);
+
+  @POST('post')
+  Future<String> genericListOther(
+      @Body() ValueWrapper<List<TaskQuery>> request);
+
+  @POST('post')
+  Future<String> genericListGeneric(
+      @Body() ValueWrapper<List<ValueWrapper<TaskQuery>>> request);
+
+  @POST('post')
+  Future<String> nestedGenericBase(
+      @Body() ValueWrapper<ValueWrapper<String>> request);
+
+  @POST('post')
+  Future<String> nestedGenericOther(
+      @Body() ValueWrapper<ValueWrapper<TaskQuery>> request);
 }
 
 @JsonSerializable()

@@ -1,7 +1,26 @@
 # Changelog
+
+
+## 3.0.0
+
+- Support `Parser.FlutterCompute` for generating data on separate isolates (#408)
+
+## 2.2.0
+
+- rollback to dio from dip_http
+
+## 2.1.0
+
+- replace dio by dio_http
+
+- fix generic use toJson method in Post @Body  
+
+- nullable list of int was added to generator
+
 ## 2.0.1
 
 - add CacheControl
+
 ## 2.0.0-beta3
 
 - Fixed CancelRequest generating invalid code (#322)
