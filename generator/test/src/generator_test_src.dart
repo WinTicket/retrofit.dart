@@ -389,7 +389,7 @@ abstract class TestAbstractObjectBodyNullable {
     contains: true,
     expectedLogItems: [
       "ProtoUser is GeneratedMessage.\n"
-          "Remember to set responseDecoder in Dio instance.",
+          "Remember to set requestEncoder in Dio `BaseOptions`.",
     ])
 @RestApi(baseUrl: "https://httpbin.org/")
 abstract class TestGeneratedMessageBody {

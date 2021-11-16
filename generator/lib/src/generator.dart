@@ -1247,7 +1247,7 @@ You should create a new class to encapsulate the response.
                 "GeneratedMessage body ${_displayString(_bodyName.type)} can not be nullable.");
           }
           log.info("${_displayString(_bodyName.type)} is GeneratedMessage.\n"
-              "Remember to set responseDecoder in Dio instance.");
+              "Remember to set requestEncoder in Dio `BaseOptions`.");
           blocks.add(
               refer(_bodyName.displayName).assignFinal(_dataVar).statement);
         } else {
