@@ -43,6 +43,7 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
   static const _onReceiveProgress = "onReceiveProgress";
   static const _path = 'path';
   var hasCustomOptions = false;
+  var hasProtobufRequest = false;
 
   /// Global options sepcefied in the `build.yaml`
   final RetrofitOptions globalOptions;
@@ -78,6 +79,7 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
     final baseUrl = clientAnnotation.baseUrl;
     final annotClassConsts = element.constructors
         .where((c) => !c.isFactory && !c.isDefaultConstructor);
+    hasProtobufRequest = false;
     final classBuilder = Class((c) {
       c
         ..name = '_$className'
@@ -1029,6 +1031,15 @@ You should create a new class to encapsulate the response.
   }
 
   Method _generateTypeSetterMethod() {
+    final requestEncoderBody = hasProtobufRequest
+        ? '''requestOptions.requestEncoder = (request, options) {
+      if (options.data is GeneratedMessage) {
+        return (options.data as GeneratedMessage).writeToBuffer();
+      } else {
+        return utf8.encode(request);
+      }
+    };'''
+        : '';
     return Method((m) {
       final t = refer('T');
       final optionsParam = Parameter((p) {
@@ -1049,7 +1060,7 @@ You should create a new class to encapsulate the response.
       } else {
         requestOptions.responseType = ResponseType.json;
       }
-    }
+    }$requestEncoderBody
     return requestOptions;''');
     });
   }
@@ -1246,8 +1257,7 @@ You should create a new class to encapsulate the response.
             log.warning(
                 "GeneratedMessage body ${_displayString(_bodyName.type)} can not be nullable.");
           }
-          log.info("${_displayString(_bodyName.type)} is GeneratedMessage.\n"
-              "Remember to set responseDecoder in Dio instance.");
+          hasProtobufRequest = true;
           blocks.add(
               refer(_bodyName.displayName).assignFinal(_dataVar).statement);
         } else {

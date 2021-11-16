@@ -383,18 +383,52 @@ abstract class TestAbstractObjectBodyNullable {
 }
 
 @ShouldGenerate(
-    r'''
+  r'''
     final _data = user;
 ''',
-    contains: true,
-    expectedLogItems: [
-      "ProtoUser is GeneratedMessage.\n"
-          "Remember to set responseDecoder in Dio instance.",
-    ])
+  contains: true,
+)
 @RestApi(baseUrl: "https://httpbin.org/")
 abstract class TestGeneratedMessageBody {
   @POST("/users")
   Future<String> createUser({@Body() ProtoUser user});
+}
+
+@ShouldGenerate(
+  r'''
+        requestOptions.responseType = ResponseType.json;
+      }
+    }
+    requestOptions.requestEncoder = (request, options) {
+      if (options.data is GeneratedMessage) {
+        return (options.data as GeneratedMessage).writeToBuffer();
+      } else {
+        return utf8.encode(request);
+      }
+    };
+    return requestOptions;
+''',
+  contains: true,
+)
+@RestApi(baseUrl: "https://httpbin.org/")
+abstract class TestProtobufBodyShouldGenerateRequestEncoder {
+  @POST("/users")
+  Future<String> createUser({@Body() ProtoUser user});
+}
+
+@ShouldGenerate(
+  r'''
+        requestOptions.responseType = ResponseType.json;
+      }
+    }
+    return requestOptions;
+''',
+  contains: true,
+)
+@RestApi(baseUrl: "https://httpbin.org/")
+abstract class TestNonProtobufBodyShouldNotGeneratRequestEncoder {
+  @POST("/users")
+  Future<String> createUser({@Body() User user});
 }
 
 @ShouldGenerate(
