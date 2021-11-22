@@ -340,7 +340,7 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
     String? definePath = method.peek("path")?.stringValue;
     paths.forEach((k, v) {
       final value = v.peek("value")?.stringValue ?? k.displayName;
-      definePath = definePath?.replaceFirst("{$value}", "\$${k.displayName}");
+      definePath = definePath?.replaceFirst("{$value}", "\${${k.displayName}}");
     });
     return literal(definePath);
   }
@@ -1494,14 +1494,20 @@ You should create a new class to encapsulate the response.
             ]).statement);
           } else if (innerType != null &&
               _typeChecker(MultipartFile).isExactlyType(innerType)) {
+            if (p.type.isNullable) {
+              blocks.add(Code("if (${p.displayName} != null) {"));
+            }
             blocks
                 .add(refer(_dataVar).property('files').property("addAll").call([
               refer(''' 
-                  ${p.displayName}?.map((i) => MapEntry(
+                  ${p.displayName}.map((i) => MapEntry(
                 '${fieldName}',
                 i))
                   ''')
             ]).statement);
+            if (p.type.isNullable) {
+              blocks.add(Code("}"));
+            }
           } else if (innerType?.element is ClassElement) {
             final ele = innerType!.element as ClassElement;
             if (_missingToJson(ele)) {
