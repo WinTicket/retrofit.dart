@@ -7,6 +7,8 @@ import 'package:retrofit/retrofit.dart';
 import 'package:dio/dio.dart';
 
 @ShouldGenerate(r'''
+// ignore_for_file: unnecessary_brace_in_string_interps
+
 class _RestClient implements RestClient {
   _RestClient(this._dio, {this.baseUrl});
 
@@ -130,6 +132,26 @@ abstract class HttpPatchTest {
 @RestApi(baseUrl: "https://httpbin.org/")
 abstract class FormUrlEncodedTest {
   @POST("/get")
+  @FormUrlEncoded()
+  Future<String> ip();
+}
+
+@ShouldGenerate(
+  r"contentType: 'multipart/form-data'",
+  contains: true,
+)
+@RestApi(baseUrl: "https://httpbin.org/")
+abstract class MultipartTest {
+  @POST("/get")
+  @MultiPart()
+  Future<String> ip();
+}
+
+@ShouldThrow('Two content-type annotation on one request ip', element: false)
+@RestApi(baseUrl: "https://httpbin.org/")
+abstract class TwoContentTypeAnnotationOnSameMethodTest {
+  @POST("/get")
+  @MultiPart()
   @FormUrlEncoded()
   Future<String> ip();
 }
@@ -745,6 +767,17 @@ abstract class TestHttpResponseArray {
         ))));
 ''', contains: true)
 @ShouldGenerate(r'''
+    final _data = FormData();
+    if (files != null) {
+      _data.files.addAll(files.map((i) => MapEntry(
+          'files',
+          MultipartFile.fromFileSync(
+            i.path,
+            filename: i.path.split(Platform.pathSeparator).last,
+          ))));
+    }
+''', contains: true)
+@ShouldGenerate(r'''
     if (file != null) {
       _data.files.add(MapEntry(
           'file',
@@ -756,6 +789,9 @@ abstract class TestHttpResponseArray {
 abstract class TestFileList {
   @POST("/")
   Future<void> testFileList(@Part() List<File> files);
+
+  @POST("/")
+  Future<void> testOptionalFileList(@Part() List<File>? files);
 
   @POST("/")
   Future<void> testOptionalFile({@Part() File file});
@@ -1407,10 +1443,11 @@ abstract class DynamicInnerGenericTypeShouldBeCastedAsDynamic {
 @ShouldGenerate(
   r'''
     final value = GenericUser<List<User>>.fromJson(
-        _result.data!,
-        (json) => (json as List<dynamic>)
-            .map<User>((i) => User.fromJson(i as Map<String, dynamic>))
-            .toList());
+      _result.data!,
+      (json) => (json as List<dynamic>)
+          .map<User>((i) => User.fromJson(i as Map<String, dynamic>))
+          .toList(),
+    );
     return value;
   ''',
   contains: true,
@@ -1429,7 +1466,8 @@ abstract class DynamicInnerListGenericTypeShouldBeCastedRecursively {
             _result.data!,
             (json) => (json as List<dynamic>)
                 .map<User>((i) => User.fromJson(i as Map<String, dynamic>))
-                .toList());
+                .toList(),
+          );
     return value;
   ''',
   contains: true,
@@ -1496,9 +1534,10 @@ abstract class NullableDynamicInnerGenericTypeShouldBeCastedAsMap {
 @ShouldGenerate(
   r'''
     final value = GenericUser<List<double>>.fromJson(
-        _result.data!,
-        (json) =>
-            (json as List<dynamic>).map<double>((i) => i as double).toList());
+      _result.data!,
+      (json) =>
+          (json as List<dynamic>).map<double>((i) => i as double).toList(),
+    );
     return value;
   ''',
   contains: true,
@@ -1517,7 +1556,8 @@ abstract class DynamicInnerListGenericPrimitiveTypeShouldBeCastedRecursively {
             _result.data!,
             (json) => (json as List<dynamic>)
                 .map<double>((i) => i as double)
-                .toList());
+                .toList(),
+          );
     return value;
   ''',
   contains: true,
@@ -1597,3 +1637,23 @@ mixin MethodInMixin {
 )
 @RestApi()
 abstract class NoMethods with MethodInMixin {}
+
+@ShouldGenerate(
+  r'''await _dio.fetch<Map<String, dynamic>?>''',
+  contains: true,
+)
+@RestApi()
+abstract class NullableGenericCastFetch {
+  @GET("/")
+  Future<User?> get();
+}
+
+@ShouldGenerate(
+  r'''await _dio.fetch<Map<String, dynamic>>''',
+  contains: true,
+)
+@RestApi()
+abstract class GenericCastFetch {
+  @GET("/")
+  Future<User> get();
+}

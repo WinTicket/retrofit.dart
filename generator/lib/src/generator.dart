@@ -15,6 +15,8 @@ import 'package:retrofit/retrofit.dart' as retrofit;
 import 'package:source_gen/source_gen.dart';
 import 'package:tuple/tuple.dart';
 
+const _analyzerIgnores = '// ignore_for_file: unnecessary_brace_in_string_interps';
+
 class RetrofitOptions {
   final bool? autoCastResponse;
 
@@ -102,7 +104,7 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
     });
 
     final emitter = DartEmitter();
-    return DartFormatter().format('${classBuilder.accept(emitter)}');
+    return DartFormatter().format([_analyzerIgnores, classBuilder.accept(emitter)].join('\n\n'));
   }
 
   Field _buildDioFiled() => Field((m) => m
@@ -217,6 +219,24 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
 
   ConstantReader? _getCacheAnnotation(MethodElement method) {
     final annotation = _typeChecker(retrofit.CacheControl)
+        .firstAnnotationOf(method, throwOnUnresolved: false);
+    if (annotation != null) return ConstantReader(annotation);
+    return null;
+  }
+
+  ConstantReader? _getContentTypeAnnotation(MethodElement method) {
+    final multipart = _getMultipartAnnotation(method);
+    final formUrlEncoded = _getFormUrlEncodedAnnotation(method);
+
+    if (multipart != null && formUrlEncoded != null) {
+      throw InvalidGenerationSourceError('Two content-type annotation on one request ${method.name}');
+    }
+
+    return multipart ?? formUrlEncoded;
+  }
+
+  ConstantReader? _getMultipartAnnotation(MethodElement method) {
+    final annotation = _typeChecker(retrofit.MultiPart)
         .firstAnnotationOf(method, throwOnUnresolved: false);
     if (annotation != null) return ConstantReader(annotation);
     return null;
@@ -382,11 +402,12 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
       extraOptions[_contentType] = contentTypeInHeader;
     }
 
-    final contentType = _getFormUrlEncodedAnnotation(m);
+    final contentType = _getContentTypeAnnotation(m);
     if (contentType != null) {
       extraOptions[_contentType] =
           literal(contentType.peek("mime")?.stringValue);
     }
+
     extraOptions[_baseUrlVar] = refer(_baseUrlVar);
 
     final responseType = _getResponseTypeAnnotation(m);
@@ -700,8 +721,11 @@ You should create a new class to encapsulate the response.
           blocks.add(Code(
               "final value = ${_displayString(returnType)}.fromBuffer($_resultVar.data!);"));
         } else {
+          final fetchType = returnType.isNullable
+              ? "Map<String,dynamic>?"
+              : "Map<String,dynamic>";
           blocks.add(
-            refer("await $_dioVar.fetch<Map<String,dynamic>>")
+            refer("await $_dioVar.fetch<$fetchType>")
                 .call([options])
                 .assignFinal(_resultVar)
                 .statement,
@@ -801,7 +825,7 @@ You should create a new class to encapsulate the response.
             .map<${genericTypeString}>((i) => ${genericTypeString}.fromJson(
                   i as Map<String, dynamic>,${_getInnerJsonSerializableMapperFn(genericType)}
                 ))
-            .toList()
+            .toList(),
     """;
         } else {
           if (_isBasicType(genericType)) {
@@ -810,7 +834,7 @@ You should create a new class to encapsulate the response.
             .map<${genericTypeString}>((i) => 
                   i as ${genericTypeString}
                 )
-            .toList()
+            .toList(),
     """;
           } else {
             mapperVal = """
@@ -818,7 +842,7 @@ You should create a new class to encapsulate the response.
             .map<${genericTypeString}>((i) =>
             ${genericTypeString == 'dynamic' ? ' i as Map<String, dynamic>' : genericTypeString + '.fromJson(  i as Map<String, dynamic> )  '}
     )
-            .toList()
+            .toList(),
     """;
           }
         }
@@ -1481,6 +1505,9 @@ You should create a new class to encapsulate the response.
             final conType = contentType == null
                 ? ""
                 : 'contentType: MediaType.parse(${literal(contentType)}),';
+            if (p.type.isNullable) {
+              blocks.add(Code("if (${p.displayName} != null) {"));
+            }
             blocks
                 .add(refer(_dataVar).property('files').property("addAll").call([
               refer(''' 
@@ -1492,6 +1519,9 @@ You should create a new class to encapsulate the response.
                     )))
                   ''')
             ]).statement);
+            if (p.type.isNullable) {
+              blocks.add(Code("}"));
+            }
           } else if (innerType != null &&
               _typeChecker(MultipartFile).isExactlyType(innerType)) {
             if (p.type.isNullable) {
