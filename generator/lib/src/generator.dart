@@ -15,7 +15,8 @@ import 'package:retrofit/retrofit.dart' as retrofit;
 import 'package:source_gen/source_gen.dart';
 import 'package:tuple/tuple.dart';
 
-const _analyzerIgnores = '// ignore_for_file: unnecessary_brace_in_string_interps';
+const _analyzerIgnores =
+    '// ignore_for_file: unnecessary_brace_in_string_interps';
 
 class RetrofitOptions {
   final bool? autoCastResponse;
@@ -104,7 +105,8 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
     });
 
     final emitter = DartEmitter();
-    return DartFormatter().format([_analyzerIgnores, classBuilder.accept(emitter)].join('\n\n'));
+    return DartFormatter()
+        .format([_analyzerIgnores, classBuilder.accept(emitter)].join('\n\n'));
   }
 
   Field _buildDioFiled() => Field((m) => m
@@ -229,7 +231,8 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
     final formUrlEncoded = _getFormUrlEncodedAnnotation(method);
 
     if (multipart != null && formUrlEncoded != null) {
-      throw InvalidGenerationSourceError('Two content-type annotation on one request ${method.name}');
+      throw InvalidGenerationSourceError(
+          'Two content-type annotation on one request ${method.name}');
     }
 
     return multipart ?? formUrlEncoded;
@@ -412,13 +415,18 @@ class RetrofitGenerator extends GeneratorForAnnotation<retrofit.RestApi> {
 
     final responseType = _getResponseTypeAnnotation(m);
     if (responseType != null) {
+      final v = responseType.peek("responseType")?.objectValue;
+      log.info("ResponseType  :  ${v?.getField("index")?.toIntValue()}");
       final rsType = ResponseType.values.firstWhere((it) {
         return responseType
                 .peek("responseType")
                 ?.objectValue
-                .toString()
-                .contains(it.toString().split(".")[1]) ??
-            false;
+                .getField('index')
+                ?.toIntValue() ==
+            it.index;
+      }, orElse: () {
+        log.warning("responseType cast error!!!!");
+        return ResponseType.json;
       });
 
       extraOptions["responseType"] = refer(rsType.toString());
@@ -1021,7 +1029,7 @@ You should create a new class to encapsulate the response.
         /// required parameters
         ..requiredParameters.add(Parameter((p) {
           p.name = "options";
-          p.type = refer("Options?").type;
+          p.type = refer("Object?").type;
         }))
 
         /// add method body
@@ -1029,25 +1037,25 @@ You should create a new class to encapsulate the response.
          if (options is RequestOptions) {
             return options as RequestOptions;
           }
-          if (options == null) {
-            return RequestOptions(path: '');
+          if (options is Options) {
+            return RequestOptions(
+              method: options.method,
+              sendTimeout: options.sendTimeout,
+              receiveTimeout: options.receiveTimeout,
+              extra: options.extra,
+              headers: options.headers,
+              responseType: options.responseType,
+              contentType: options.contentType.toString(),
+              validateStatus: options.validateStatus,
+              receiveDataWhenStatusError: options.receiveDataWhenStatusError,
+              followRedirects: options.followRedirects,
+              maxRedirects: options.maxRedirects,
+              requestEncoder: options.requestEncoder,
+              responseDecoder: options.responseDecoder,
+              path: '',
+            );
           }
-          return RequestOptions(
-            method: options.method,
-            sendTimeout: options.sendTimeout,
-            receiveTimeout: options.receiveTimeout,
-            extra: options.extra,
-            headers: options.headers,
-            responseType: options.responseType,
-            contentType: options.contentType.toString(),
-            validateStatus: options.validateStatus,
-            receiveDataWhenStatusError: options.receiveDataWhenStatusError,
-            followRedirects: options.followRedirects,
-            maxRedirects: options.maxRedirects,
-            requestEncoder: options.requestEncoder,
-            responseDecoder: options.responseDecoder,
-            path: '',
-          );
+          return RequestOptions(path: '');
         ''');
     });
   }
