@@ -1584,7 +1584,7 @@ abstract class DynamicInnerGenericTypeShouldBeWithoutGenericArgumentType {
 
 @ShouldGenerate(
   r'''
-    final value = ProtoUser.fromBuffer(_result.data!);
+    final value = await compute(ProtoUser.fromBuffer, _result.data!);
 ''',
   contains: true,
 )

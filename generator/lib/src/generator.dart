@@ -727,7 +727,7 @@ You should create a new class to encapsulate the response.
                 .statement,
           );
           blocks.add(Code(
-              "final value = ${_displayString(returnType)}.fromBuffer($_resultVar.data!);"));
+              "final value = await compute(${_displayString(returnType)}.fromBuffer, $_resultVar.data!);"));
         } else {
           final fetchType = returnType.isNullable
               ? "Map<String,dynamic>?"
