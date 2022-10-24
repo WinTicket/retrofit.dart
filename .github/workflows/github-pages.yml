@@ -10,13 +10,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: google/dart:latest
+      image: dart:stable
     steps:
       - uses: actions/checkout@v2
       - name: Build docs
         run: |
           cd retrofit
-          dartdoc
+          dart doc
           mv doc/api ../public
       - name: GitHub Pages
         uses: crazy-max/ghaction-github-pages@v1.3.0

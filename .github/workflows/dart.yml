@@ -10,19 +10,19 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image: google/dart:latest
+      image: dart:stable
 
     steps:
       - uses: actions/checkout@v2
       - name: Generate code
-        run: cd example && pub get && pub run build_runner build --delete-conflicting-outputs
+        run: cd example && dart pub get && dart pub run build_runner build --delete-conflicting-outputs
       - name: Analyze packages
         run: PKGS="example retrofit generator" ./tool/travis.sh dartanalyzer
       - name: Install dependencies
-        run: cd generator && pub get
+        run: cd generator && dart pub get
       - name: Run tests
         run: |
-          cd generator && pub run test
+          cd generator && dart pub run test
 
       - name: Setup credentials
         run: |
@@ -30,7 +30,8 @@ jobs:
           echo ${{secrets.PUB_CREDENTIALS}} | base64 --decode > ~/.pub-cache/credentials.json
       - name: Release new version
         run: |
+          cp -r example generator/
           cd generator
           RELEASE=${GITHUB_REF##*/}
           sed -i -e "s/version:.*/version: $RELEASE/g" pubspec.yaml 
-          pub publish -f
+          dart pub publish -f
