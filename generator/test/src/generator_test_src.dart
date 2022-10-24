@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart' hide Headers;
+import 'package:protobuf/protobuf.dart';
 import 'package:retrofit/retrofit.dart';
 import 'package:source_gen_test/annotations.dart';
 
@@ -441,6 +442,14 @@ abstract class AbstractUser with AbstractUserMixin {
 
 Map<String, dynamic> serializeUser(User object) => object.toJson();
 
+abstract class ProtoUser extends GeneratedMessage {
+  factory ProtoUser.fromBuffer(List<int> i) => throw UnimplementedError();
+}
+
+class CustomProtoEnum extends ProtobufEnum {
+  CustomProtoEnum(int value, String name) : super(value, name);
+}
+
 @ShouldGenerate(
   '''
     final value = _result.data!;
@@ -520,7 +529,19 @@ abstract class TestAbstractObjectBodyNullable {
 }
 
 @ShouldGenerate(
-  '''
+  r'''
+    final _data = user;
+''',
+  contains: true,
+)
+@RestApi(baseUrl: "https://httpbin.org/")
+abstract class TestGeneratedMessageBody {
+  @POST("/users")
+  Future<String> createUser({@Body() ProtoUser user});
+}
+
+@ShouldGenerate(
+  r'''
     final queryParameters = <String, dynamic>{r'u': u.toJson()};
     queryParameters.addAll(user1.toJson());
     queryParameters.addAll(user2.toJson());
@@ -550,6 +571,18 @@ abstract class TestObjectQueries {
     @Queries() User? user3,
     @Queries() User? user4,
   });
+}
+
+@ShouldGenerate(
+  r'''
+    final queryParameters = <String, dynamic>{r'u': u.value};
+''',
+  contains: true,
+)
+@RestApi(baseUrl: "https://httpbin.org/")
+abstract class TestProtoEnumQueries {
+  @GET("/users")
+  Future<String> getResult(@Query('u') CustomProtoEnum u);
 }
 
 class CustomObject {
@@ -1755,7 +1788,19 @@ abstract class DynamicInnerGenericTypeShouldBeWithoutGenericArgumentType {
 }
 
 @ShouldGenerate(
-  '''
+  r'''
+    final value = await compute(ProtoUser.fromBuffer, _result.data!);
+''',
+  contains: true,
+)
+@RestApi(baseUrl: "https://httpbin.org/")
+abstract class GeneratedMessageBody {
+  @GET("/xx")
+  Future<ProtoUser> getResult();
+}
+
+@ShouldGenerate(
+  r'''
     final value = _result.data == null
         ? null
         : GenericUserWithoutGenericArgumentFactories<dynamic>.fromJson(
