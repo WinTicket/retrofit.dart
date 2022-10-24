@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart' hide Headers;
 import 'package:protobuf/protobuf.dart';
@@ -530,14 +529,11 @@ abstract class TestAbstractObjectBodyNullable {
 }
 
 @ShouldGenerate(
-    r'''
+  r'''
     final _data = user;
 ''',
-    contains: true,
-    expectedLogItems: [
-      "ProtoUser is GeneratedMessage.\n"
-          "Remember to set requestEncoder in Dio `BaseOptions`.",
-    ])
+  contains: true,
+)
 @RestApi(baseUrl: "https://httpbin.org/")
 abstract class TestGeneratedMessageBody {
   @POST("/users")

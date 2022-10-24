@@ -828,9 +828,9 @@ You should create a new class to encapsulate the response.
             ..add(const Code('final value = $_resultVar.data;'));
         } else if (_typeChecker(GeneratedMessage).isSuperTypeOf(returnType)) {
           blocks.add(
-            refer("await $_dioVar.fetch<List<int>>")
-                .call([options])
-                .assignFinal(_resultVar)
+            declareFinal(_resultVar)
+                .assign(
+                    refer("await $_dioVar.fetch<List<int>>").call([options]))
                 .statement,
           );
           blocks.add(Code(
@@ -1492,10 +1492,9 @@ if (T != dynamic &&
             log.warning(
                 "GeneratedMessage body ${_displayString(bodyName.type)} can not be nullable.");
           }
-          log.info("${_displayString(bodyName.type)} is GeneratedMessage.\n"
-              "Remember to set requestEncoder in Dio `BaseOptions`.");
-          blocks.add(
-              refer(bodyName.displayName).assignFinal(_dataVar).statement);
+          blocks.add(declareFinal(dataVar)
+              .assign(refer(bodyName.displayName))
+              .statement);
         } else {
           if (_missingToJson(ele)) {
             log.warning(
