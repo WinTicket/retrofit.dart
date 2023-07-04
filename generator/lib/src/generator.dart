@@ -1317,12 +1317,13 @@ if (T != dynamic &&
         _typeChecker(Float).isExactlyType(returnType);
   }
 
-  bool _isEnum(DartType? dartType){
-    if (dartType == null || dartType.element == null){
+  bool _isEnum(DartType? dartType) {
+    if (dartType == null || dartType.element == null) {
       return false;
     }
     return dartType.element is EnumElement;
   }
+
   bool _isDateTime(DartType? dartType) {
     if (dartType == null) {
       return false;
@@ -1348,7 +1349,7 @@ if (T != dynamic &&
           p.type.isDartCoreList ||
           p.type.isDartCoreMap) {
         value = refer(p.displayName);
-      }else if (_typeChecker(ProtobufEnum).isSuperTypeOf(p.type)) {
+      } else if (_typeChecker(ProtobufEnum).isSuperTypeOf(p.type)) {
         value = p.type.nullabilitySuffix == NullabilitySuffix.question
             ? refer(p.displayName).nullSafeProperty('value')
             : refer(p.displayName).property('value');
@@ -1361,12 +1362,11 @@ if (T != dynamic &&
                       .nullSafeProperty('toIso8601String')
                       .call([])
                   : refer(p.displayName).property('toIso8601String').call([]);
-            } else if(_isEnum(p.type)) {
+            } else if (_isEnum(p.type)) {
               value = p.type.nullabilitySuffix == NullabilitySuffix.question
-                  ? refer(p.displayName)
-                      .nullSafeProperty('name')
+                  ? refer(p.displayName).nullSafeProperty('name')
                   : refer(p.displayName).property('name');
-            }else{
+            } else {
               value = p.type.nullabilitySuffix == NullabilitySuffix.question
                   ? refer(p.displayName).nullSafeProperty('toJson').call([])
                   : refer(p.displayName).property('toJson').call([]);
